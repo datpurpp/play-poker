@@ -1,0 +1,412 @@
+import random
+from collections import Counter
+
+# --- CARD & DECK SETUP ---
+SUITS = ['♠', '♥', '♦', '♣']
+RANKS = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+RANK_VALUES = {r: i for i, r in enumerate(RANKS)}
+
+class Card:
+    def __init__(self, rank, suit):
+        self.rank = rank
+        self.suit = suit
+        self.value = RANK_VALUES[rank]
+        
+    def __repr__(self):
+        return f"{self.rank}{self.suit}"
+
+def create_deck():
+    return [Card(r, s) for s in SUITS for r in RANKS]
+
+# --- POKER HAND EVALUATION ---
+def evaluate_hand(hand):
+    """
+    Evaluates a 5 card hand and returns a tuple: (score, tie_breaker_values, hand_name)
+    Rankings: 0-High Card, 1-Pair, 2-Two Pair, 3-Three of a Kind,
+              4-Straight, 5-Flush, 6-Full House, 7-Four of a Kind,
+              8-Straight Flush, 9-Royal Flush
+    """
+    values = sorted([card.value for card in hand], reverse=True)
+    suits = [card.suit for card in hand]
+    
+    is_flush = len(set(suits)) == 1
+    
+    is_straight = False
+    unique_vals = sorted(list(set(values)))
+    if len(unique_vals) == 5 and (unique_vals[-1] - unique_vals[0] == 4):
+        is_straight = True
+    
+    # Special case Ace low straight (A, 2, 3, 4, 5) -> values (12, 3, 2, 1, 0)
+    if set(values) == {12, 3, 2, 1, 0}:
+        is_straight = True
+        values = [3, 2, 1, 0, -1] # Re-rank for tie-breaking
+        
+    counts = Counter(values)
+    mc = counts.most_common()
+    
+    # Royal / Straight Flush
+    if is_flush and is_straight:
+        if max(values) == 12:
+            return (9, values, "Royal Flush")
+        return (8, values, "Straight Flush")
+        
+    # Four of a Kind
+    if mc[0][1] == 4:
+        four_val = mc[0][0]
+        kicker = mc[1][0]
+        return (7, [four_val, kicker], "Four of a Kind")
+        
+    # Full House
+    if mc[0][1] == 3 and mc[1][1] == 2:
+        three_val = mc[0][0]
+        pair_val = mc[1][0]
+        return (6, [three_val, pair_val], "Full House")
+        
+    # Flush
+    if is_flush:
+        return (5, values, "Flush")
+        
+    # Straight
+    if is_straight:
+        return (4, values, "Straight")
+        
+    # Three of a Kind
+    if mc[0][1] == 3:
+        three_val = mc[0][0]
+        kickers = [mc[1][0], mc[2][0]]
+        return (3, [three_val] + kickers, "Three of a Kind")
+        
+    # Two Pair
+    if mc[0][1] == 2 and mc[1][1] == 2:
+        pairs = sorted([mc[0][0], mc[1][0]], reverse=True)
+        kicker = mc[2][0]
+        return (2, pairs + [kicker], "Two Pair")
+        
+    # Pair
+    if mc[0][1] == 2:
+        pair_val = mc[0][0]
+        kickers = [mc[1][0], mc[2][0], mc[3][0]]
+        return (1, [pair_val] + kickers, "Pair")
+        
+    # High Card
+    return (0, values, "High Card")
+
+
+# --- AI DISCARD LOGIC ---
+def computer_discard_decision(hand, max_discards):
+    """
+    Simple AI: Holds onto pairs or better. If it has nothing,
+    it keeps its highest cards and discards the lowest up to the limit.
+    """
+    score, values, hand_name = evaluate_hand(hand)
+    counts = Counter([card.value for card in hand])
+    
+    # If AI has a straight, flush, full house, etc., don't discard anything!
+    if score >= 4:
+        return []
+        
+    discard_indices = []
+    
+    # If AI has Three of a Kind, Two Pair, or One Pair, keep the matching cards, discard kickers
+    if score in [1, 2, 3]:
+        for i, card in enumerate(hand):
+            if counts[card.value] == 1: # It's a kicker
+                discard_indices.append(i)
+    else:
+        # High card setup: Discard the lowest cards up to the limit
+        sorted_indices = sorted(range(len(hand)), key=lambda k: hand[k].value)
+        discard_indices = sorted_indices[:max_discards]
+        
+    # Strictly respect the round constraint limit
+    return discard_indices[:max_discards]
+
+# --- AI BETTING LOGIC ---
+def computer_betting_decision(hand, current_bet, player_investment, max_chips):
+    """
+    AI evaluates its hand and decides whether to fold, check, call, or raise.
+    """
+    score, _, _ = evaluate_hand(hand)
+    call_amount = current_bet - player_investment
+    
+    if call_amount > max_chips:
+        call_amount = max_chips
+
+    # Base behavior based on hand quality score (0 to 9)
+    if score >= 4:  # Strong hand (Straight or better)
+        action = "raise" if call_amount == 0 or random.random() > 0.3 else "call"
+    elif score >= 1: # Medium hand (Pair, Two Pair, Three of a Kind)
+        if call_amount == 0:
+            action = "check"
+        elif call_amount <= 5:
+            action = "call"
+        else:
+            action = "fold" if random.random() > 0.4 else "call"
+    else: # Weak hand (High Card)
+        if call_amount == 0:
+            action = "check"
+        elif call_amount <= 2:
+            action = "call"
+        else:
+            action = "fold"
+
+    # Normalize actions based on current betting state
+    if action == "check" and call_amount > 0:
+        action = "call"
+    if action == "raise" and max_chips <= call_amount:
+        action = "call"
+        
+    # Determine the financial details of the decision
+    if action == "fold":
+        return "fold", 0
+    elif action == "raise":
+        raise_val = min(max_chips - call_amount, random.choice([2, 4, 6]))
+        if raise_val <= 0:
+            return "call", call_amount
+        return "raise", call_amount + raise_val
+    elif action == "call":
+        return "call", call_amount
+    else:
+        return "check", 0
+
+
+# --- RUN BETTING ROUND ---
+# --- RUN BETTING ROUND ---
+def run_betting_round(hands, chips, active_players, label_names):
+    """
+    Handles a structured round of betting where active players can check, call, raise, or fold.
+    """
+    current_bet = 0
+    investments = {i: 0 for i in active_players}
+    settled = {i: False for i in active_players}
+    
+    # Check settlement status only for players who are still active in the hand
+    while not all(settled[p] for p in active_players) and len(active_players) > 1:
+        for i in list(active_players):
+            if len(active_players) <= 1 or settled[i]:
+                continue
+                
+            call_amount = current_bet - investments[i]
+            
+            # --- HUMAN PLAYER TURN ---
+            if i == 0:
+                print(f"\n--- YOUR TURN TO BET ---")
+                print(f"Current Pot addition needed to stay in: {call_amount} chips (Total Bet this round: {current_bet})")
+                print(f"Your remaining chips: {chips[0]}")
+                
+                while True:
+                    options = ["fold"]
+                    if call_amount == 0:
+                        options.append("check")
+                    if call_amount > 0 and chips[0] >= call_amount:
+                        options.append("call")
+                    if chips[0] > call_amount:
+                        options.append("raise")
+                        
+                    choice = input(f"Choose an action ({', '.join(options)}): ").strip().lower()
+                    
+                    if choice not in options:
+                        print("X Invalid option. Try again.")
+                        continue
+                        
+                    if choice == "fold":
+                        active_players.remove(0)
+                        print("You folded your hand.")
+                        break
+                    elif choice == "check":
+                        settled[0] = True
+                        print("You checked.")
+                        break
+                    elif choice == "call":
+                        chips[0] -= call_amount
+                        investments[0] += call_amount
+                        settled[0] = True
+                        print(f"You called {call_amount} chips.")
+                        break
+                    elif choice == "raise":
+                        try:
+                            raise_amt = int(input(f"How much extra would you like to raise by? (1-{chips[0] - call_amount}): "))
+                            if 1 <= raise_amt <= (chips[0] - call_amount):
+                                total_put_in = call_amount + raise_amt
+                                chips[0] -= total_put_in
+                                investments[0] += total_put_in
+                                current_bet = investments[0]
+                                
+                                # A raise un-settles everyone else who now needs to match it
+                                for p in active_players:
+                                    settled[p] = (p == 0)
+                                print(f"You raised the bet by {raise_amt}. Total round bet is now {current_bet}.")
+                                break
+                            else:
+                                print("X Invalid chip amount.")
+                        except ValueError:
+                            print("X Please enter a valid number.")
+                            
+            # --- COMPUTER PLAYER TURN ---
+            else:
+                if chips[i] == 0:  # Already out of chips
+                    settled[i] = True
+                    continue
+                    
+                action, amount = computer_betting_decision(hands[i], current_bet, investments[i], chips[i])
+                
+                if action == "fold":
+                    active_players.remove(i)
+                    print(f"🤖 {label_names[i]} folded.")
+                elif action == "check":
+                    settled[i] = True
+                    print(f"🤖 {label_names[i]} checked.")
+                elif action == "call":
+                    chips[i] -= amount
+                    investments[i] += amount
+                    settled[i] = True
+                    print(f"🤖 {label_names[i]} called {amount} chips.")
+                elif action == "raise":
+                    chips[i] -= amount
+                    investments[i] += amount
+                    current_bet = investments[i]
+                    for p in active_players:
+                        settled[p] = (p == i)
+                    print(f"🤖 {label_names[i]} raised! They added {amount} chips. Total round bet is now {current_bet}.")
+
+    return sum(investments.values())
+
+
+
+# --- MAIN GAME LOOP ---
+def play_game():
+    print("=" * 45)
+    print("♠ ♥ ♦ ♣ WELCOME TO MULTI-ROUND BLIND DRAW POKER ♣ ♦ ♥ ♠")
+    print("=" * 45)
+    
+    while True:
+        try:
+            num_players = int(input("Enter number of players (2, 3, or 4): "))
+            if num_players in [2, 3, 4]:
+                break
+            print("X Invalid choice. Please select 2, 3, or 4.")
+        except ValueError:
+            print("X Please enter a valid number.")
+            
+    chips = [100] * num_players
+    label_names = ["Your Hand"] + [f"Computer {i}'s Hand" for i in range(1, num_players)]
+    
+    deck = create_deck()
+    random.shuffle(deck)
+    
+    hands = [[deck.pop() for _ in range(5)] for _ in range(num_players)]
+    active_players = list(range(num_players))
+    pot = 0
+    
+    # --- BLINDS PHASE ---
+    print("\n--- FORCED BLINDS ---")
+    sb_amount = min(chips[0], 1)
+    chips[0] -= sb_amount
+    pot += sb_amount
+    print(f"You posted Small Blind: {sb_amount} chip.")
+    
+    bb_amount = min(chips[1], 2)
+    chips[1] -= bb_amount
+    pot += bb_amount
+    print(f"{label_names[1]} posted Big Blind: {bb_amount} chips.")
+    print(f"Total starting Pot: {pot} chips.")
+
+    rounds = [(1, 3), (2, 2), (3, 1)]
+    
+    for round_num, max_discards in rounds:
+        if len(active_players) <= 1:
+            break
+            
+        print(f"\n--- ROUND {round_num} (Discard up to {max_discards} card{'s' if max_discards > 1 else ''}) ---")
+        
+        if 0 in active_players:
+            print(f"Your current hand: {hands[0]}")
+            
+            while True:
+                try:
+                    print("Select cards to discard by typing their positions (1 to 5), separated by spaces.")
+                    print("Press Enter to keep all cards.")
+                    user_input = input("Positions to discard: ").strip()
+                    
+                    if not user_input:
+                        to_discard = []
+                        break
+                        
+                    to_discard = [int(x) - 1 for x in user_input.split()]
+                    
+                    if len(to_discard) > max_discards:
+                        print(f"X Error: You can only discard a maximum of {max_discards} cards this round.")
+                        continue
+                    if any(pos < 0 or pos > 4 for pos in to_discard):
+                        print("X Error: Card positions must be between 1 and 5.")
+                        continue
+                    if len(to_discard) != len(set(to_discard)):
+                        print("X Error: Please do not enter duplicate positions.")
+                        continue
+                    break
+                except ValueError:
+                    print("X Error: Invalid input. Please enter numbers separated by spaces.")
+            
+            if to_discard:
+                for pos in sorted(to_discard, reverse=True):
+                    hands[0].pop(pos)
+                while len(hands[0]) < 5:
+                    hands[0].append(deck.pop())
+                print(f"Your new hand: {hands[0]}")
+            else:
+                print("You decided to keep all your cards.")
+                
+        for i in list(active_players):
+            if i == 0:
+                continue
+            comp_discard_indices = computer_discard_decision(hands[i], max_discards)
+            if comp_discard_indices:
+                for pos in sorted(comp_discard_indices, reverse=True):
+                    hands[i].pop(pos)
+                while len(hands[i]) < 5:
+                    hands[i].append(deck.pop())
+                print(f"🤖 {label_names[i]} discarded {len(comp_discard_indices)} card{'s' if len(comp_discard_indices) > 1 else ''}.")
+            else:
+                print(f"🤖 {label_names[i]} decided to keep all its cards.")
+
+        print(f"\n--- ROUND {round_num} BETTING PHASE ---")
+        round_pot = run_betting_round(hands, chips, active_players, label_names)
+        pot += round_pot
+        print(f"Current total pot holds: {pot} chips.")
+
+    # --- THE SHOWDOWN ---
+    print("\n" + "="*20)
+    print("     THE SHOWDOWN     ")
+    print("="*20)
+    
+    if len(active_players) == 1:
+        winner_idx = active_players[0]
+        print(f"\n🏆 {label_names[winner_idx].upper()} WINS by default! Everyone else folded.")
+        print(f"Collected the pot of {pot} chips.")
+    else:
+        evaluated_players = []
+        for i in active_players:
+            score, tie_breaker, hand_name = evaluate_hand(hands[i])
+            print(f"{label_names[i]} -> {hands[i]} ({hand_name})")
+            evaluated_players.append((score, tie_breaker, i))
+            
+        best_hand = max(evaluated_players, key=lambda x: (x[0], x[1]))
+        winners = [p for p in evaluated_players if p[0] == best_hand[0] and p[1] == best_hand[1]]
+        
+        print("\n" + "="*45)
+        if len(winners) == 1:
+            win_idx = winners[0][2]
+            score, _, hand_name = evaluate_hand(hands[win_idx])
+            if win_idx == 0:
+                print(f"🎉 YOU WIN! You have the better hand combination: {hand_name}!")
+            else:
+                print(f"👑 {label_names[win_idx].upper()} WINS! Better hand combination: {hand_name}!")
+            print(f"Claimed the entire pot of {pot} chips.")
+        else:
+            winner_labels = [label_names[w[2]] for w in winners]
+            split_pot = pot // len(winners)
+            print(f"🤝 IT'S A DRAW BETWEEN: {', '.join(winner_labels)}!!")
+            print(f"The pot of {pot} chips is split evenly ({split_pot} chips each).")
+        print("="*45)
+
+if __name__ == "__main__":
+    play_game()
