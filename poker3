@@ -138,21 +138,21 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips):
     elif score == 3: # good hand (three of a kind)
         if call_amount == 0:
             action = "raise"
-        elif call_amount <= 16:
+        elif call_amount <= 15:
             action = "call"
         else:
             action = "fold"
     elif score >= 2: # mediium hand (two pair)
         if call_amount == 0:
             action = "check"
-        elif call_amount <= 9:
+        elif call_amount <= 8:
             action = "call"
         else:
             action = "fold"
     elif score >= 1: # low hand (pair)
         if call_amount == 0:
             action = "check"
-        elif call_amount <= 6:
+        elif call_amount <= 5:
             action = "call"
         else:
             action = "fold"
@@ -160,7 +160,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips):
         if score >= 0: # weak hand (high card)
             if call_amount == 0:
                 action = "check"
-            elif call_amount <= 3:
+            elif call_amount <= 2:
                 action = "call"
             else:
                 action = "fold"
