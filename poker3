@@ -175,7 +175,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips):
     if action == "fold":
         return "fold", 0
     elif action == "raise":
-        raise_val = min(max_chips - call_amount, random.choice([3, 5, 8]))
+        raise_val = min(max_chips - call_amount, random.choice([3, 4, 5, 8]))
         if raise_val <= 0:
             return "call", call_amount
         return "raise", call_amount + raise_val
