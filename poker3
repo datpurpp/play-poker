@@ -134,25 +134,25 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips):
     # Base behavior based on hand quality score (0 to 9)
     
     if score >= 4:  # Strong hand (Straight or better)
-            action = "raise"
+            action = "raise3"
     elif score >= 3: # good hand (three of a kind)
         if call_amount == 0:
-            action = "raise"
-        elif call_amount <= 15:
+            action = "raise2"
+        elif call_amount <= 16:
             action = "call"
         else:
             action = "fold"
     elif score >= 2: # mediium hand (two pair)
         if call_amount == 0:
-            action = "check"
-        elif call_amount <= 8:
+            action = "raise"
+        elif call_amount <= 9:
             action = "call"
         else:
             action = "fold"
     elif score >= 1: # low hand (pair)
         if call_amount == 0:
             action = "check"
-        elif call_amount <= 5:
+        elif call_amount <= 6:
             action = "call"
         else:
             action = "fold"
@@ -160,7 +160,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips):
         if score >= 0: # weak hand (high card)
             if call_amount == 0:
                 action = "check"
-            elif call_amount <= 2:
+            elif call_amount <= 3:
                 action = "call"
             else:
                 action = "fold"
@@ -168,14 +168,24 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips):
     # Normalize actions based on current betting state
     if action == "check" and call_amount > 0:
         action = "call"
-    if action == "raise" and max_chips <= call_amount:
+    if action in ["raise", "raise2", "raise3"] and max_chips <= call_amount:
         action = "call"
         
     # Determine the financial details of the decision
     if action == "fold":
         return "fold", 0
     elif action == "raise":
-        raise_val = min(max_chips - call_amount, random.choice([3, 4, 5, 8]))
+        raise_val = min(max_chips - call_amount, random.choice([3, 4, 5]))
+        if raise_val <= 0:
+            return "call", call_amount
+        return "raise", call_amount + raise_val
+    elif action == "raise2":
+        raise_val = min(max_chips - call_amount, random.choice([4, 5, 6]))
+        if raise_val <= 0:
+            return "call", call_amount
+        return "raise", call_amount + raise_val
+    elif action == "raise3":
+        raise_val = min(max_chips - call_amount, random.choice([5, 7, 8]))
         if raise_val <= 0:
             return "call", call_amount
         return "raise", call_amount + raise_val
