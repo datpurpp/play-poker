@@ -121,7 +121,7 @@ def computer_discard_decision(hand, max_discards):
     return discard_indices[:max_discards]
 
 # --- AI BETTING LOGIC ---
-def computer_betting_decision(hand, current_bet, player_investment, max_chips):
+def computer_betting_decision(hand, current_bet, player_investment, max_chips, total_hand_investment):
     """
     AI evaluates its hand and decides whether to fold, check, call, or raise.
     """
@@ -133,6 +133,16 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips):
     action5 = random.choice(["call", "fold", "fold", "fold"])
     action6 = random.choice(["call", "fold", "fold"])
     action7 = random.choice(["call", "fold"])
+    
+    if total_hand_investment >= 20:
+        action3 = random.choice(["call"])
+        action8 = random.choice(["call", "fold", "fold", "fold", "fold", "fold"])
+        action2 = random.choice(["call", "fold", "fold", "fold", "fold"])
+        action4 = random.choice(["call", "fold", "fold", "fold"])
+        action5 = random.choice(["call", "fold", "fold"])
+        action6 = random.choice(["call", "fold"])
+        action7 = random.choice(["call"])
+        
     
     score, _, _ = evaluate_hand(hand)
     call_amount = current_bet - player_investment
@@ -233,8 +243,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips):
 
 
 # --- RUN BETTING ROUND ---
-# --- RUN BETTING ROUND ---
-def run_betting_round(hands, chips, active_players, label_names):
+def run_betting_round(hands, chips, active_players, label_names, master_investments):
     """
     Handles a structured round of betting where active players can check, call, raise, or fold.
     """
@@ -242,7 +251,6 @@ def run_betting_round(hands, chips, active_players, label_names):
     investments = {i: 0 for i in active_players}
     settled = {i: False for i in active_players}
     
-    # Check settlement status only for players who are still active in the hand
     while not all(settled[p] for p in active_players) and len(active_players) > 1:
         for i in list(active_players):
             if len(active_players) <= 1 or settled[i]:
@@ -282,6 +290,7 @@ def run_betting_round(hands, chips, active_players, label_names):
                     elif choice == "call":
                         chips[0] -= call_amount
                         investments[0] += call_amount
+                        master_investments[0] += call_amount # Track globally
                         settled[0] = True
                         print(f"You called {call_amount} chips.")
                         break
@@ -292,9 +301,9 @@ def run_betting_round(hands, chips, active_players, label_names):
                                 total_put_in = call_amount + raise_amt
                                 chips[0] -= total_put_in
                                 investments[0] += total_put_in
+                                master_investments[0] += total_put_in # Track globally
                                 current_bet = investments[0]
                                 
-                                # A raise un-settles everyone else who now needs to match it
                                 for p in active_players:
                                     settled[p] = (p == 0)
                                 print(f"You raised the bet by {raise_amt}. Total round bet is now {current_bet}.")
@@ -306,11 +315,15 @@ def run_betting_round(hands, chips, active_players, label_names):
                             
             # --- COMPUTER PLAYER TURN ---
             else:
-                if chips[i] == 0:  # Already out of chips
+                if chips[i] == 0:
                     settled[i] = True
                     continue
                     
-                action, amount = computer_betting_decision(hands[i], current_bet, investments[i], chips[i])
+                # Calculate what they've invested total up to this exact moment
+                current_total_investment = master_investments[i] + investments[i]
+                
+                # Pass the master investment into the decision
+                action, amount = computer_betting_decision(hands[i], current_bet, investments[i], chips[i], current_total_investment)
                 
                 if action == "fold":
                     active_players.remove(i)
@@ -321,17 +334,20 @@ def run_betting_round(hands, chips, active_players, label_names):
                 elif action == "call":
                     chips[i] -= amount
                     investments[i] += amount
+                    master_investments[i] += amount # Track globally
                     settled[i] = True
                     print(f"🤖 {label_names[i]} called {amount} chips.")
                 elif action == "raise":
                     chips[i] -= amount
                     investments[i] += amount
+                    master_investments[i] += amount # Track globally
                     current_bet = investments[i]
                     for p in active_players:
                         settled[p] = (p == i)
                     print(f"🤖 {label_names[i]} raised! They added {amount} chips. Total round bet is now {current_bet}.")
 
     return sum(investments.values())
+
 
 
 
@@ -360,16 +376,20 @@ def play_game():
     active_players = list(range(num_players))
     pot = 0
     
+    master_investments = {i: 0 for i in range(num_players)}
+    
     # --- BLINDS PHASE ---
     print("\n--- FORCED BLINDS ---")
     sb_amount = min(chips[0], 1)
     chips[0] -= sb_amount
     pot += sb_amount
+    master_investments[0] += sb_amount # 🌟 Track it
     print(f"You posted Small Blind: {sb_amount} chip.")
     
     bb_amount = min(chips[1], 2)
     chips[1] -= bb_amount
     pot += bb_amount
+    master_investments[1] += bb_amount # 🌟 Track it
     print(f"{label_names[1]} posted Big Blind: {bb_amount} chips.")
     print(f"Total starting Pot: {pot} chips.")
 
@@ -432,8 +452,10 @@ def play_game():
                 print(f"🤖 {label_names[i]} decided to keep all its cards.")
 
         print(f"\n--- ROUND {round_num} BETTING PHASE ---")
-        round_pot = run_betting_round(hands, chips, active_players, label_names)
+        # 🌟 Pass master_investments into the function here
+        round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments)
         pot += round_pot
+
         print(f"Current total pot holds: {pot} chips.")
 
     # --- THE SHOWDOWN ---
