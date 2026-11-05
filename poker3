@@ -132,22 +132,38 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips):
         call_amount = max_chips
 
     # Base behavior based on hand quality score (0 to 9)
+    
     if score >= 4:  # Strong hand (Straight or better)
-        action = "raise" if call_amount == 0 or random.random() > 0.3 else "call"
-    elif score >= 1: # Medium hand (Pair, Two Pair, Three of a Kind)
+            action = "raise"
+    elif score == 3: # good hand (three of a kind)
         if call_amount == 0:
-            action = "check"
-        elif call_amount <= 5:
-            action = "call"
-        else:
-            action = "fold" if random.random() > 0.4 else "call"
-    else: # Weak hand (High Card)
-        if call_amount == 0:
-            action = "check"
-        elif call_amount <= 2:
+            action = "raise"
+        elif call_amount <= 16:
             action = "call"
         else:
             action = "fold"
+    elif score >= 2: # mediium hand (two pair)
+        if call_amount == 0:
+            action = "check"
+        elif call_amount <= 9:
+            action = "call"
+        else:
+            action = "fold"
+    elif score >= 1: # low hand (pair)
+        if call_amount == 0:
+            action = "check"
+        elif call_amount <= 6:
+            action = "call"
+        else:
+            action = "fold"
+    else: 
+        if score >= 0: # weak hand (high card)
+            if call_amount == 0:
+                action = "check"
+            elif call_amount <= 3:
+                action = "call"
+            else:
+                action = "fold"
 
     # Normalize actions based on current betting state
     if action == "check" and call_amount > 0:
