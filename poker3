@@ -147,7 +147,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips):
     elif score >= 3: # good hand (three of a kind)
         if call_amount == 0:
             action = "raise2"
-        elif call_amount <=10
+        elif call_amount <=10:
             action = "call"
         elif call_amount <= 15:
             action = action7
