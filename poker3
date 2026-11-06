@@ -181,7 +181,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
             action = "raise3"
     elif score >= 3: # good hand (three of a kind)
         if call_amount == 0:
-            action = "raise2"
+            action = random.choice(["raise2", "raise2", "check"])
         elif call_amount <=10:
             action = "call"
         elif call_amount <= 15:
@@ -198,7 +198,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
             action = "fold"
     elif score >= 2: # medium hand (two pair)
         if call_amount == 0:
-            action = "raise"
+            action = random.choice(["raise2", "check"])
         elif call_amount <= 5:
             action = "call"
         elif call_amount <= 15:
