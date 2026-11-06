@@ -141,7 +141,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         action4 = random.choice(["call", "fold", "fold", "fold"])
         action5 = random.choice(["call", "fold", "fold"])
         action6 = random.choice(["call", "fold"])
-        action7 = random.choice(["call"])
+        action7 = random.choice(["call", "call", "fold"])
         
     elif total_hand_investment >= 38:
         action3 = random.choice(["call"])
@@ -149,25 +149,24 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         action2 = random.choice(["call", "fold", "fold", "fold"])
         action4 = random.choice(["call", "fold", "fold"])
         action5 = random.choice(["call", "fold", ])
-        action6 = random.choice(["call"])
-        action7 = random.choice(["call"])
-
+        action6 = random.choice(["call", "call", "fold"])
+        action7 = random.choice(["call", "call", "call", "fold"])
     elif total_hand_investment >= 70:
         action3 = random.choice(["call"])
         action8 = random.choice(["call", "fold", "fold", "fold"])
         action2 = random.choice(["call", "fold", "fold"])
         action4 = random.choice(["call", "fold"])
-        action5 = random.choice(["call"])
-        action6 = random.choice(["call"])
-        action7 = random.choice(["call"])
+        action5 = random.choice(["call", "call", "fold"])
+        action6 = random.choice(["call", "call", "call", "fold"])
+        action7 = random.choice(["call", "call", "call", "call", "fold"])   
     elif total_hand_investment >= 90:
         action3 = random.choice(["call"])
         action8 = random.choice(["call", "fold", "fold"])
         action2 = random.choice(["call", "fold"])
-        action4 = random.choice(["call"])
-        action5 = random.choice(["call"])
-        action6 = random.choice(["call"])
-        action7 = random.choice(["call"])
+        action4 = random.choice(["call", "call", "fold"])
+        action5 = random.choice(["call", "call", "call", "fold"])
+        action6 = random.choice(["call", "call", "call", "call", "fold"])
+        action7 = random.choice(["call", "call", "call", "call", "call", "fold"])
         
     
     score, _, _ = evaluate_hand(hand)
