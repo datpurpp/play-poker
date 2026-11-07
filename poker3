@@ -258,7 +258,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
                 action = action6  
             elif call_amount <= 20:
                 action = action4
-            elif call_amount <= 45
+            elif call_amount <= 45:
                 action = action8 
             elif call_amount <= 80:
                 action = action9
