@@ -93,6 +93,109 @@ def evaluate_hand(hand):
     return (0, values, "High Card")
 
 
+# --- DEUCES WILD EVALUATION SYSTEM ---
+def evaluate_wild_hand(hand):
+    """
+    Evaluates a 5-card hand where 2s are wild cards.
+    Can return up to a score of 10: "Five of a Kind".
+    """
+    # Separate wild cards (deuces) from natural cards
+    deuces = [c for c in hand if c.rank == '2']
+    wild_count = len(deuces)
+    
+    # If all 5 cards are deuces, it's the highest possible Five of a Kind (Aces)
+    if wild_count == 5:
+        return (10, [12, 12, 12, 12, 12], "Five of a Kind (Aces)")
+        
+    naturals = [c for c in hand if c.rank != '2']
+    natural_values = sorted([c.value for c in naturals], reverse=True)
+    natural_suits = [c.suit for c in naturals]
+    
+    counts = Counter(natural_values)
+    mc = counts.most_common()
+    
+    # 1. Check for Five of a Kind
+    # Most common natural card count + wild cards equals 5
+    if mc[0][1] + wild_count == 5:
+        best_rank = mc[0][0]
+        return (10, [best_rank] * 5, f"Five of a Kind ({RANKS[best_rank]}s)")
+        
+    # Pre-calculate flush and straight possibilities with remaining cards
+    is_flush = len(set(natural_suits)) <= 1 if naturals else True
+    
+    # Straight detection algorithm with wild cards
+    is_straight = False
+    best_straight_high = -1
+    unique_nats = sorted(list(set(natural_values)))
+    
+    # Test all possible straight high-card endings from 5 (value 3) up to Ace (value 12)
+    for high_val in range(3, 13):
+        needed = set(range(high_val - 4, high_val + 1))
+        # Handle special Ace-low straight possibility (A, 2, 3, 4, 5) -> values (-1, 0, 1, 2, 3)
+        if high_val == 3:
+            needed = {-1, 0, 1, 2} # Re-mapped values for low straight check
+            adjusted_nats = {-1 if v == 12 else v for v in unique_nats}
+            missing = needed - adjusted_nats
+        else:
+            missing = needed - set(unique_nats)
+            
+        if len(missing) <= wild_count:
+            is_straight = True
+            if high_val > best_straight_high:
+                best_straight_high = high_val
+
+    # 2. Royal Flush / Straight Flush
+    if is_flush and is_straight:
+        if best_straight_high == 12:
+            return (9, [12, 11, 10, 9, 8], "Royal Flush")
+        return (8, list(range(best_straight_high, best_straight_high - 5, -1)), "Straight Flush")
+
+    # 3. Four of a Kind
+    if mc[0][1] + wild_count >= 4:
+        four_val = mc[0][0]
+        remaining = [v for v in natural_values if v != four_val]
+        kicker = remaining[0] if remaining else 12
+        return (7, [four_val, kicker], "Four of a Kind")
+
+    # 4. Full House
+    # Can happen naturally, or if you have a Three of a Kind / Two Pair built up using wild cards
+    if (len(mc) >= 2 and mc[0][1] + wild_count >= 3 and mc[1][1] >= 2) or (wild_count == 1 and mc[0][1] == 2 and mc[1][1] == 2):
+        three_val = mc[0][0]
+        pair_val = mc[1][0]
+        return (6, [three_val, pair_val], "Full House")
+
+    # 5. Flush
+    if is_flush:
+        # Pad values up to 5 elements with Aces for dynamic wild-card fill tracking
+        fill_values = list(natural_values) + [12] * wild_count
+        return (5, sorted(fill_values, reverse=True)[:5], "Flush")
+
+    # 6. Straight
+    if is_straight:
+        if best_straight_high == 3:
+            return (4, [3, 2, 1, 0, -1], "Straight")
+        return (4, list(range(best_straight_high, best_straight_high - 5, -1)), "Straight")
+
+    # 7. Three of a Kind
+    if mc[0][1] + wild_count >= 3:
+        three_val = mc[0][0]
+        kickers = [v for v in natural_values if v != three_val] + [12, 12]
+        return (3, [three_val, kickers[0], kickers[1]], "Three of a Kind")
+
+    # 8. Two Pair
+    if len(mc) >= 2 and mc[0][1] == 2 and mc[1][1] == 2:
+        return (2, [mc[0][0], mc[1][0], mc[2][0] if len(mc) > 2 else 12], "Two Pair")
+
+    # 9. One Pair
+    if mc[0][1] + wild_count >= 2:
+        pair_val = mc[0][0] if mc else 12
+        kickers = [v for v in natural_values if v != pair_val] + [12, 12, 12]
+        return (1, [pair_val, kickers[0], kickers[1], kickers[2]], "Pair")
+
+    # 10. High Card
+    return (0, natural_values, "High Card")
+
+
 # --- AI DISCARD LOGIC ---
 def computer_discard_decision(hand, max_discards):
     """
@@ -439,7 +542,6 @@ def play_game():
     print("♠ ♥ ♦ ♣ WELCOME TO PERSISTENT BLIND DRAW POKER ♣ ♦ ♥ ♠")
     print("=" * 45)
     
-    # Load player bank from file if it exists, otherwise default to 100
     try:
         with open("poker_save.json", "r") as f:
             saved_data = json.load(f)
@@ -448,7 +550,6 @@ def play_game():
         player_wallet = 100
 
     while True:
-        # Computers always refresh their bank accounts to 100 every single round
         player_banks = [player_wallet, 100, 100, 100]
 
         print("\n" + "="*30)
@@ -456,30 +557,33 @@ def play_game():
         print(f"Your Saved Wallet: {player_banks[0]} chips")
         print(f"Computer Banks: Reset to 100 chips every match")
         print("="*30)
-        print("1. Play a Round of Poker")
-        print("2. Renew Certificate (Free +100 Chips)")
-        print("3. Quit Game")
+        print("1. Play Standard Draw Poker")
+        print("2. Play 'Deuces Wild' Mode (2s can be anything!)")
+        print("3. Renew Certificate (Free +100 Chips)")
+        print("4. Quit Game")
         
-        menu_choice = input("Select an option (1-3): ").strip()
+        menu_choice = input("Select an option (1-4): ").strip()
         
-        if menu_choice == "2":
+        if menu_choice == "3":
             player_wallet += 100
-            # Auto-save when renewing certificate
             with open("poker_save.json", "w") as f:
                 json.dump({"player_bank": player_wallet}, f)
             print("\n📜 Certificate Renewed! 100 free chips added and saved to your bank.")
             continue
-        elif menu_choice == "3":
-            # Final safe check save
+        elif menu_choice == "4":
             with open("poker_save.json", "w") as f:
                 json.dump({"player_bank": player_wallet}, f)
             print(f"\nThanks for playing! Final wallet balance of {player_wallet} saved safely.")
             break
-        elif menu_choice != "1":
-            print("X Invalid choice. Select 1, 2, or 3.")
+        elif menu_choice not in ["1", "2"]:
+            print("X Invalid choice. Select 1, 2, 3, or 4.")
             continue
 
-        # --- SETUP GAME ROUND WITH WALLET CHIPS ---
+        # Set game mode flag variable based on menu input selection
+        is_deuces_wild = (menu_choice == "2")
+        if is_deuces_wild:
+            print("\n🃏 'DEUCES WILD' MODE ACTIVATED! 2s are completely wild cards! 🃏")
+
         while True:
             try:
                 num_players = int(input("\nEnter number of players for this match (2, 3, or 4): "))
@@ -489,12 +593,10 @@ def play_game():
             except ValueError:
                 print("X Please enter a valid number.")
 
-        # Check if you have enough money left to play the blinds
         if player_wallet <= 2:
             print("\n❌ You don't have enough chips to post blinds! Renew your certificate first.")
             continue
 
-        # Initialize match chips
         chips = [player_banks[i] for i in range(num_players)]
         label_names = ["Your Hand"] + [f"Computer {i}'s Hand" for i in range(1, num_players)]
         
@@ -507,7 +609,6 @@ def play_game():
         
         master_investments = {i: 0 for i in range(num_players)}
         
-        # --- BLINDS PHASE ---
         print("\n--- FORCED BLINDS ---")
         sb_amount = min(chips[0], 1)
         chips[0] -= sb_amount
@@ -527,7 +628,9 @@ def play_game():
         if len(active_players) > 1:
             print("\n--- PHASE 1: FIRST CARDS DEAL ---")
             if 0 in active_players:
-                print(f"Your starting hand: {hands[0]}")
+                # Dynamically choose evaluator function based on game mode state
+                _, _, initial_hand_name = evaluate_wild_hand(hands[0]) if is_deuces_wild else evaluate_hand(hands[0])
+                print(f"Your starting hand: {hands[0]} ({initial_hand_name})")
                 
             print("\n--- PHASE 1 BETTING PHASE ---")
             round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments)
@@ -542,7 +645,8 @@ def play_game():
             print(f"\n--- PHASE 2: FIRST DISCARD (Discard up to {max_discards} cards to get your 2nd cards) ---")
             
             if 0 in active_players:
-                print(f"Your current hand: {hands[0]}")
+                _, _, p2_hand_name = evaluate_wild_hand(hands[0]) if is_deuces_wild else evaluate_hand(hands[0])
+                print(f"Your current hand: {hands[0]} ({p2_hand_name})")
                 while True:
                     try:
                         user_input = input("Positions to discard (1 to 5, separated by spaces) or Enter to keep: ").strip()
@@ -562,7 +666,8 @@ def play_game():
                         hands[0].pop(pos)
                     while len(hands[0]) < 5:
                         hands[0].append(deck.pop())
-                    print(f"Your new hand (Second Cards): {hands[0]}")
+                    _, _, new_p2_name = evaluate_wild_hand(hands[0]) if is_deuces_wild else evaluate_hand(hands[0])
+                    print(f"Your new hand (Second Cards): {hands[0]} ({new_p2_name})")
                 else:
                     print("You decided to keep all your cards.")
                     
@@ -583,6 +688,7 @@ def play_game():
             pot += round_pot
             print(f"Current total pot holds: {pot} chips.")
             
+            
         # =========================================================================
         # PHASE 3: DISCARD & DRAW TO GET THIRD CARDS -> FINAL BET
         # =========================================================================
@@ -591,7 +697,8 @@ def play_game():
             print(f"\n--- PHASE 3: SECOND DISCARD (Discard up to {max_discards} cards to get your 3rd cards) ---")
             
             if 0 in active_players:
-                print(f"Your current hand: {hands[0]}")
+                _, _, p3_hand_name = evaluate_wild_hand(hands[0]) if is_deuces_wild else evaluate_hand(hands[0])
+                print(f"Your current hand: {hands[0]} ({p3_hand_name})")
                 while True:
                     try:
                         user_input = input("Positions to discard (1 to 5, separated by spaces) or Enter to keep: ").strip()
@@ -611,7 +718,8 @@ def play_game():
                         hands[0].pop(pos)
                     while len(hands[0]) < 5:
                         hands[0].append(deck.pop())
-                    print(f"Your final hand (Third Cards): {hands[0]}")
+                    _, _, new_p3_name = evaluate_wild_hand(hands[0]) if is_deuces_wild else evaluate_hand(hands[0])
+                    print(f"Your final hand (Third Cards): {hands[0]} ({new_p3_name})")
                 else:
                     print("You decided to keep all your cards.")
                     
@@ -640,7 +748,8 @@ def play_game():
             print(f"\n--- PHASE 4: THIRD DISCARD (Discard up to {max_discards} card to get your final cards) ---")
             
             if 0 in active_players:
-                print(f"Your current hand: {hands[0]}")
+                _, _, p4_hand_name = evaluate_wild_hand(hands[0]) if is_deuces_wild else evaluate_hand(hands[0])
+                print(f"Your current hand: {hands[0]} ({p4_hand_name})")
                 while True:
                     try:
                         user_input = input("Positions to discard (1 to 5, separated by spaces) or Enter to keep: ").strip()
@@ -660,7 +769,8 @@ def play_game():
                         hands[0].pop(pos)
                     while len(hands[0]) < 5:
                         hands[0].append(deck.pop())
-                    print(f"Your final hand (Fourth Cards): {hands[0]}")
+                    _, _, new_p4_name = evaluate_wild_hand(hands[0]) if is_deuces_wild else evaluate_hand(hands[0])
+                    print(f"Your final hand (Fourth Cards): {hands[0]} ({new_p4_name})")
                 else:
                     print("You decided to keep all your cards.")
                     
@@ -696,7 +806,8 @@ def play_game():
         else:
             evaluated_players = []
             for i in active_players:
-                score, tie_breaker, hand_name = evaluate_hand(hands[i])
+                # Score using the chosen game-mode system route flag
+                score, tie_breaker, hand_name = evaluate_wild_hand(hands[i]) if is_deuces_wild else evaluate_hand(hands[i])
                 print(f"{label_names[i]} -> {hands[i]} ({hand_name})")
                 evaluated_players.append((score, tie_breaker, i))
                 
@@ -706,7 +817,7 @@ def play_game():
             print("\n" + "="*45)
             if len(winners) == 1:
                 win_idx = winners[0][2]
-                score, _, hand_name = evaluate_hand(hands[win_idx])
+                score, _, hand_name = evaluate_wild_hand(hands[win_idx]) if is_deuces_wild else evaluate_hand(hands[win_idx])
                 if win_idx == 0:
                     print(f"🎉 YOU WIN! You have the better hand combination: {hand_name}!")
                 else:
@@ -721,15 +832,12 @@ def play_game():
             print("="*45)
 
         # --- PROCESS PAYOUT MATH FOR THE PERSISTENT PLAYER ---
-        # Deduct what you spent on the table
         player_wallet -= master_investments[0]
         
-        # If you won or split the pot, collect those winnings
         if 0 in round_winners:
             split_pot = pot // len(round_winners)
             player_wallet += split_pot
 
-        # Guarantee wallet never falls strictly into negative balances
         if player_wallet < 0:
             player_wallet = 0
 
