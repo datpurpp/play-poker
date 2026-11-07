@@ -172,10 +172,11 @@ def evaluate_wild_hand(hand):
     # Test all possible straight high-card endings from 5 (value 3) up to Ace (value 12)
     for high_val in range(4, 13):
         needed = set(range(high_val - 4, high_val + 1))
-        # Natural 2 (value 0) cannot be part of a natural straight set here because it's wild
-        missing = [v for v in needed if v not in unique_nats and v != 0]
-        # Count how many slots are empty that must be filled by wild cards
-        if len(missing) <= wild_count:
+        # Find which required straight values are present as natural cards in the hand
+        matching_nats = [v for v in natural_values if v in needed]
+        missing = [v for v in needed if v not in unique_nats]
+        # A valid straight must use all remaining non-wild cards plus the required wild cards
+        if len(missing) <= wild_count and len(matching_nats) == len(natural_values):
             is_straight = True
             if high_val > best_straight_high:
                 best_straight_high = high_val
