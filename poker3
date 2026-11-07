@@ -586,6 +586,58 @@ def play_game():
         round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments)
         pot += round_pot
         print(f"Current total pot holds: {pot} chips.")
+        
+        
+    # =========================================================================
+    # PHASE 4: FINAL DISCARD & DRAW (Discard up to 1 card) -> FINAL BET
+    # =========================================================================
+    if len(active_players) > 1:
+        max_discards = 1
+        print(f"\n--- PHASE 4: THIRD DISCARD (Discard up to {max_discards} card to get your final cards) ---")
+        
+        # Player Discard
+        if 0 in active_players:
+            print(f"Your current hand: {hands[0]}")
+            while True:
+                try:
+                    user_input = input("Positions to discard (1 to 5, separated by spaces) or Enter to keep: ").strip()
+                    if not user_input:
+                        to_discard = []
+                        break
+                    to_discard = [int(x) - 1 for x in user_input.split()]
+                    if len(to_discard) > max_discards or any(pos < 0 or pos > 4 for pos in to_discard) or len(to_discard) != len(set(to_discard)):
+                        print("X Error: Invalid positions or exceeded limit.")
+                        continue
+                    break
+                except ValueError:
+                    print("X Error: Invalid input.")
+            
+            if to_discard:
+                for pos in sorted(to_discard, reverse=True):
+                    hands[0].pop(pos)
+                while len(hands[0]) < 5:
+                    hands[0].append(deck.pop())
+                print(f"Your final hand (Fourth Cards): {hands[0]}")
+            else:
+                print("You decided to keep all your cards.")
+                
+        # AI Discard
+        for i in list(active_players):
+            if i == 0: continue
+            comp_discard_indices = computer_discard_decision(hands[i], max_discards)
+            if comp_discard_indices:
+                for pos in sorted(comp_discard_indices, reverse=True):
+                    hands[i].pop(pos)
+                while len(hands[i]) < 5:
+                    hands[i].append(deck.pop())
+                print(f"🤖 {label_names[i]} discarded {len(comp_discard_indices)} card.")
+            else:
+                print(f"🤖 {label_names[i]} kept all cards.")
+
+        print("\n--- PHASE 4 FINAL BETTING PHASE ---")
+        round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments)
+        pot += round_pot
+        print(f"Current total pot holds: {pot} chips.")
 
     # --- THE SHOWDOWN ---
     print("\n" + "="*20)
