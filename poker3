@@ -133,6 +133,9 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
     action5 = random.choice(["call", "fold", "fold", "fold"])
     action6 = random.choice(["call", "fold", "fold"])
     action7 = random.choice(["call", "fold"])
+    action9 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold", "fold"])
+    action10 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold", "fold", "fold"])
+    action11 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold", "fold", "fold", "fold"])
     
     if total_hand_investment >= 18:
         action3 = random.choice(["call"])
@@ -142,6 +145,10 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         action5 = random.choice(["call", "fold", "fold"])
         action6 = random.choice(["call", "fold"])
         action7 = random.choice(["call", "call", "fold"])
+        action9 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold"])
+        action10 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold", "fold"])
+        action11 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold", "fold", "fold"])
+        
         
     elif total_hand_investment >= 38:
         action3 = random.choice(["call"])
@@ -151,6 +158,9 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         action5 = random.choice(["call", "fold", ])
         action6 = random.choice(["call", "call", "fold"])
         action7 = random.choice(["call", "call", "call", "fold"])
+        action9 = random.choice(["call", "fold", "fold", "fold", "fold", "fold"])
+        action10 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold"])
+        action11 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold", "fold"])
     elif total_hand_investment >= 70:
         action3 = random.choice(["call"])
         action8 = random.choice(["call", "fold", "fold", "fold"])
@@ -158,15 +168,21 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         action4 = random.choice(["call", "fold"])
         action5 = random.choice(["call", "call", "fold"])
         action6 = random.choice(["call", "call", "call", "fold"])
-        action7 = random.choice(["call", "call", "call", "call", "fold"])   
+        action7 = random.choice(["call", "call", "call", "call", "fold"])
+        action9 = random.choice(["call", "fold", "fold", "fold", "fold"])
+        action10 = random.choice(["call", "fold", "fold", "fold", "fold", "fold"])
+        action11 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold"])
     elif total_hand_investment >= 90:
         action3 = random.choice(["call"])
+        action9 = random.choice(["call", "fold", "fold", "fold"])
         action8 = random.choice(["call", "fold", "fold"])
         action2 = random.choice(["call", "fold"])
         action4 = random.choice(["call", "call", "fold"])
         action5 = random.choice(["call", "call", "call", "fold"])
         action6 = random.choice(["call", "call", "call", "call", "fold"])
         action7 = random.choice(["call", "call", "call", "call", "call", "fold"])
+        action10 = random.choice(["call", "fold", "fold", "fold", "fold"])
+        action11 = random.choice(["call", "fold", "fold", "fold", "fold", "fold"])
         
     
         
@@ -211,6 +227,8 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
             action = action2
         elif call_amount <= 70:
             action = action8
+        elif call_amount <= 100:
+            action = action9
         else:
             action = "fold"
     elif score >= 1: # low hand (pair)
@@ -224,6 +242,10 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
             action = action4
         elif call_amount <= 40:
             action = action8
+        elif call_amount <= 70:
+            action = action9 
+        elif call_amount <= 100:
+            action = action10
         else:
             action = "fold"
     else: 
@@ -236,6 +258,12 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
                 action = action6  
             elif call_amount <= 20:
                 action = action4
+            elif call_amount <= 45
+                action = action8 
+            elif call_amount <= 80:
+                action = action9
+            elif call_amount <= 100:
+                action = action11
             else:
                 action = "fold"
 
