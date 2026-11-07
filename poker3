@@ -264,7 +264,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
             return "call", call_amount
         return "raise", call_amount + raise_val
     elif action == "raise4":
-        raise_val = min(max_chips - call_amount, random.choice([2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 4, 4, 4, 8, 15]))
+        raise_val = min(max_chips - call_amount, random.choice([2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 8, 8, 15]))
         if raise_val <= 0:
             return "call", call_amount
         return "raise", call_amount + raise_val
