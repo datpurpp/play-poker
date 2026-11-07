@@ -333,7 +333,7 @@ def run_betting_round(hands, chips, active_players, label_names, master_investme
                     options = ["fold"]
                     if call_amount == 0:
                         options.append("check")
-                    if call_amount > 0 and chips[0] >= call_amount:
+                    if call_amount > 0 and chips[0] > call_amount:
                         options.append("call")
                     if chips[0] > call_amount:
                         options.append("raise")
@@ -353,12 +353,13 @@ def run_betting_round(hands, chips, active_players, label_names, master_investme
                         print("You checked.")
                         break
                     elif choice == "call":
-                        chips[0] -= call_amount
-                        investments[0] += call_amount
-                        master_investments[0] += call_amount # Track globally
-                        settled[0] = True
-                        print(f"You called {call_amount} chips.")
-                        break
+                       actual_call = min(call_amount, chips[0])
+                       chips[0] -= actual_call
+                       investments[0] += actual_call
+                       master_investments[0] += actual_call 
+                       settled[0] = True
+                       print(f"You called {actual_call} chips.")
+                       break
                     elif choice == "raise":
                         try:
                             raise_amt = int(input(f"How much extra would you like to raise by? (1-{chips[0] - call_amount}): "))
@@ -417,6 +418,7 @@ def run_betting_round(hands, chips, active_players, label_names, master_investme
 
 
 # --- MAIN GAME LOOP ---
+# --- MAIN GAME LOOP ---
 def play_game():
     print("=" * 45)
     print("♠ ♥ ♦ ♣ WELCOME TO MULTI-ROUND BLIND DRAW POKER ♣ ♦ ♥ ♠")
@@ -448,79 +450,129 @@ def play_game():
     sb_amount = min(chips[0], 1)
     chips[0] -= sb_amount
     pot += sb_amount
-    master_investments[0] += sb_amount # 🌟 Track it
+    master_investments[0] += sb_amount
     print(f"You posted Small Blind: {sb_amount} chip.")
     
     bb_amount = min(chips[1], 2)
     chips[1] -= bb_amount
     pot += bb_amount
-    master_investments[1] += bb_amount # 🌟 Track it
+    master_investments[1] += bb_amount
     print(f"{label_names[1]} posted Big Blind: {bb_amount} chips.")
     print(f"Total starting Pot: {pot} chips.")
 
-    rounds = [(1, 3), (2, 2), (3, 1)]
-    
-    for round_num, max_discards in rounds:
-        if len(active_players) <= 1:
-            break
+    # =========================================================================
+    # PHASE 1: GET FIRST CARDS -> BET IMMEDIATELY
+    # =========================================================================
+    if len(active_players) > 1:
+        print("\n--- PHASE 1: FIRST CARDS DEAL ---")
+        if 0 in active_players:
+            print(f"Your starting hand: {hands[0]}")
             
-        print(f"\n--- ROUND {round_num} (Discard up to {max_discards} card{'s' if max_discards > 1 else ''}) ---")
+        print("\n--- PHASE 1 BETTING PHASE ---")
+        round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments)
+        pot += round_pot
+        print(f"Current total pot holds: {pot} chips.")
+
+    # =========================================================================
+    # PHASE 2: DISCARD & DRAW TO GET SECOND CARDS -> BET
+    # =========================================================================
+    if len(active_players) > 1:
+        max_discards = 3
+        print(f"\n--- PHASE 2: FIRST DISCARD (Discard up to {max_discards} cards to get your 2nd cards) ---")
         
+        # Player Discard
         if 0 in active_players:
             print(f"Your current hand: {hands[0]}")
-            
             while True:
                 try:
-                    print("Select cards to discard by typing their positions (1 to 5), separated by spaces.")
-                    print("Press Enter to keep all cards.")
-                    user_input = input("Positions to discard: ").strip()
-                    
+                    user_input = input("Positions to discard (1 to 5, separated by spaces) or Enter to keep: ").strip()
                     if not user_input:
                         to_discard = []
                         break
-                        
                     to_discard = [int(x) - 1 for x in user_input.split()]
-                    
-                    if len(to_discard) > max_discards:
-                        print(f"X Error: You can only discard a maximum of {max_discards} cards this round.")
-                        continue
-                    if any(pos < 0 or pos > 4 for pos in to_discard):
-                        print("X Error: Card positions must be between 1 and 5.")
-                        continue
-                    if len(to_discard) != len(set(to_discard)):
-                        print("X Error: Please do not enter duplicate positions.")
+                    if len(to_discard) > max_discards or any(pos < 0 or pos > 4 for pos in to_discard) or len(to_discard) != len(set(to_discard)):
+                        print("X Error: Invalid positions or exceeded limit.")
                         continue
                     break
                 except ValueError:
-                    print("X Error: Invalid input. Please enter numbers separated by spaces.")
+                    print("X Error: Invalid input.")
             
             if to_discard:
                 for pos in sorted(to_discard, reverse=True):
                     hands[0].pop(pos)
                 while len(hands[0]) < 5:
                     hands[0].append(deck.pop())
-                print(f"Your new hand: {hands[0]}")
+                print(f"Your new hand (Second Cards): {hands[0]}")
             else:
                 print("You decided to keep all your cards.")
                 
+        # AI Discard
         for i in list(active_players):
-            if i == 0:
-                continue
+            if i == 0: continue
             comp_discard_indices = computer_discard_decision(hands[i], max_discards)
             if comp_discard_indices:
                 for pos in sorted(comp_discard_indices, reverse=True):
                     hands[i].pop(pos)
                 while len(hands[i]) < 5:
                     hands[i].append(deck.pop())
-                print(f"🤖 {label_names[i]} discarded {len(comp_discard_indices)} card{'s' if len(comp_discard_indices) > 1 else ''}.")
+                print(f"🤖 {label_names[i]} discarded {len(comp_discard_indices)} cards.")
             else:
-                print(f"🤖 {label_names[i]} decided to keep all its cards.")
+                print(f"🤖 {label_names[i]} kept all cards.")
 
-        print(f"\n--- ROUND {round_num} BETTING PHASE ---")
-        # 🌟 Pass master_investments into the function here
+        print("\n--- PHASE 2 BETTING PHASE ---")
         round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments)
         pot += round_pot
+        print(f"Current total pot holds: {pot} chips.")
 
+    # =========================================================================
+    # PHASE 3: DISCARD & DRAW TO GET THIRD CARDS -> FINAL BET
+    # =========================================================================
+    if len(active_players) > 1:
+        max_discards = 2
+        print(f"\n--- PHASE 3: SECOND DISCARD (Discard up to {max_discards} cards to get your 3rd cards) ---")
+        
+        # Player Discard
+        if 0 in active_players:
+            print(f"Your current hand: {hands[0]}")
+            while True:
+                try:
+                    user_input = input("Positions to discard (1 to 5, separated by spaces) or Enter to keep: ").strip()
+                    if not user_input:
+                        to_discard = []
+                        break
+                    to_discard = [int(x) - 1 for x in user_input.split()]
+                    if len(to_discard) > max_discards or any(pos < 0 or pos > 4 for pos in to_discard) or len(to_discard) != len(set(to_discard)):
+                        print("X Error: Invalid positions or exceeded limit.")
+                        continue
+                    break
+                except ValueError:
+                    print("X Error: Invalid input.")
+            
+            if to_discard:
+                for pos in sorted(to_discard, reverse=True):
+                    hands[0].pop(pos)
+                while len(hands[0]) < 5:
+                    hands[0].append(deck.pop())
+                print(f"Your final hand (Third Cards): {hands[0]}")
+            else:
+                print("You decided to keep all your cards.")
+                
+        # AI Discard
+        for i in list(active_players):
+            if i == 0: continue
+            comp_discard_indices = computer_discard_decision(hands[i], max_discards)
+            if comp_discard_indices:
+                for pos in sorted(comp_discard_indices, reverse=True):
+                    hands[i].pop(pos)
+                while len(hands[i]) < 5:
+                    hands[i].append(deck.pop())
+                print(f"🤖 {label_names[i]} discarded {len(comp_discard_indices)} cards.")
+            else:
+                print(f"🤖 {label_names[i]} kept all cards.")
+
+        print("\n--- PHASE 3 BETTING PHASE ---")
+        round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments)
+        pot += round_pot
         print(f"Current total pot holds: {pot} chips.")
 
     # --- THE SHOWDOWN ---
@@ -557,6 +609,7 @@ def play_game():
             print(f"🤝 IT'S A DRAW BETWEEN: {', '.join(winner_labels)}!!")
             print(f"The pot of {pot} chips is split evenly ({split_pot} chips each).")
         print("="*45)
+
 
 if __name__ == "__main__":
     play_game()
