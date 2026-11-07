@@ -17,10 +17,18 @@ class Card:
     def __repr__(self):
         return f"{self.rank}{self.suit}"
         
+        
 def play_startup_sound():
     try:
         # Plays a local audio file asynchronously so the game text doesn't freeze while loading
         winsound.PlaySound("assets//pokerchips.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
+    except Exception:
+        pass
+        
+def play_menu_music():
+    try:
+        # Plays a local audio file asynchronously so the game text doesn't freeze while loading
+        winsound.PlaySound("assets//pokertheme.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
     except Exception:
         pass
 
@@ -35,6 +43,13 @@ def play_check_sound():
     try:
         # Plays a local audio file asynchronously so the game text doesn't freeze while loading
         winsound.PlaySound("assets//check.wav", winsound.SND_FILENAME | winsound.SND_ASYNC)
+    except Exception:
+        pass
+        
+def stop_sound():
+    try:
+        # Plays a local audio file asynchronously so the game text doesn't freeze while loading
+        winsound.PlaySound(None, winsound.SND_PURGE)
     except Exception:
         pass
 
@@ -650,6 +665,7 @@ def play_game():
 
         print("\n" + "="*30)
         print(f"💰 --- MAIN MENU --- 💰")
+        play_menu_music()
         print(f"Your Saved Wallet: {player_banks[0]} chips")
         print(f"Computer Banks: Reset to 100 chips every match")
         print("="*30)
@@ -669,6 +685,7 @@ def play_game():
         elif menu_choice == "4":
             with open("poker_save.json", "w") as f:
                 json.dump({"player_bank": player_wallet}, f)
+            stop_sound()
             print(f"\nThanks for playing! Final wallet balance of {player_wallet} saved safely.")
             break
         elif menu_choice not in ["1", "2"]:
@@ -678,7 +695,10 @@ def play_game():
         # Set game mode flag variable based on menu input selection
         is_deuces_wild = (menu_choice == "2")
         if is_deuces_wild:
+            stop_sound()
             print("\n🃏 'DEUCES WILD' MODE ACTIVATED! 2s are completely wild cards! 🃏")
+        else:
+            stop_sound()
 
         while True:
             try:
