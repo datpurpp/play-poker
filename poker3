@@ -277,27 +277,27 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
     if action == "fold":
         return "fold", 0
     elif action == "raise":
-        raise_val = min(max_chips - call_amount, random.choice([3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 10, 10, 20, 50, 100]))
+        raise_val = min(max_chips - call_amount, random.choice([3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 10, 10, 20, 50, 100]))
         if raise_val <= 0:
             return "call", call_amount
         return "raise", call_amount + raise_val
     elif action == "raise2":
-        raise_val = min(max_chips - call_amount, random.choice([4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 15, 15, 30, 60, 100]))
+        raise_val = min(max_chips - call_amount, random.choice([4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 6, 6, 6, 6, 15, 15, 30, 60, 100]))
         if raise_val <= 0:
             return "call", call_amount
         return "raise", call_amount + raise_val
     elif action == "raise3":
-        raise_val = min(max_chips - call_amount, random.choice([5, 5, 5, 5, 5, 5, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 20, 20, 40, 70, 100]))
+        raise_val = min(max_chips - call_amount, random.choice([5, 5, 5, 5, 5, 5, 7, 7, 7, 7, 7, 7, 7, 8, 8, 8, 8, 8, 20, 20, 40, 70, 100]))
         if raise_val <= 0:
             return "call", call_amount
         return "raise", call_amount + raise_val
     elif action == "raise4":
-        raise_val = min(max_chips - call_amount, random.choice([2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 8, 8, 15, 40, 70, 100]))
+        raise_val = min(max_chips - call_amount, random.choice([2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 8, 8, 15, 40, 70, 100]))
         if raise_val <= 0:
             return "call", call_amount
         return "raise", call_amount + raise_val
     elif action == "raise5":
-        raise_val = min(max_chips - call_amount, random.choice([1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 6, 6, 12, 30, 60, 100]))
+        raise_val = min(max_chips - call_amount, random.choice([1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 6, 6, 12, 30, 60, 100]))
         if raise_val <= 0:
             return "call", call_amount
         return "raise", call_amount + raise_val
