@@ -183,18 +183,32 @@ def evaluate_wild_hand(hand):
     # 7. Three of a Kind
     if mc[0][1] + wild_count >= 3:
         three_val = mc[0][0]
-        kickers = [v for v in natural_values if v != three_val] + [12, 12]
-        return (3, [three_val, kickers[0], kickers[1]], "Three of a Kind")
+        # Filter out the triple value, sort remaining natural cards down
+        remaining = [v for v in natural_values if v != three_val]
+        # Dynamically fill remaining spots with the highest possible legal values (Aces down)
+        while len(remaining) < 2:
+            next_fill = 12
+            while next_fill in remaining or next_fill == three_val:
+                next_fill -= 1
+            remaining.append(next_fill)
+        return (3, [three_val, remaining[0], remaining[1]], "Three of a Kind")
 
     # 8. Two Pair
     if len(mc) >= 2 and mc[0][1] == 2 and mc[1][1] == 2:
-        return (2, [mc[0][0], mc[1][0], mc[2][0] if len(mc) > 2 else 12], "Two Pair")
+        kicker_val = mc[2][0] if len(mc) > 2 else (12 if mc[0][0] != 12 and mc[1][0] != 12 else 11)
+        return (2, [mc[0][0], mc[1][0], kicker_val], "Two Pair")
 
     # 9. One Pair
     if mc[0][1] + wild_count >= 2:
         pair_val = mc[0][0] if mc else 12
-        kickers = [v for v in natural_values if v != pair_val] + [12, 12, 12]
-        return (1, [pair_val, kickers[0], kickers[1], kickers[2]], "Pair")
+        remaining = [v for v in natural_values if v != pair_val]
+        # Dynamically calculate precise kickers without duplicate ghost values
+        while len(remaining) < 3:
+            next_fill = 12
+            while next_fill in remaining or next_fill == pair_val:
+                next_fill -= 1
+            remaining.append(next_fill)
+        return (1, [pair_val, remaining[0], remaining[1], remaining[2]], "Pair")
 
     # 10. High Card
     return (0, natural_values, "High Card")
@@ -316,7 +330,13 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
     
         
     
-    score, _, _ = evaluate_hand(hand)
+    if current_bet > 0 and '2' in [c.rank for c in hand] and total_hand_investment == 0:
+        # A quick check to see if we should treat it as wild during betting
+        score, _, _ = evaluate_wild_hand(hand)
+    else:
+        # Standard fallback if wild check isn't passed down, but let's make sure it checks both
+        score, _, _ = evaluate_wild_hand(hand) if any(c.rank == '2' for c in hand) else evaluate_hand(hand)
+        
     call_amount = current_bet - player_investment
     
     if call_amount > max_chips:
