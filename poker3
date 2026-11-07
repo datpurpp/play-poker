@@ -251,7 +251,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
     else: 
         if score >= 0: # weak hand (high card)
             if call_amount == 0:
-                action = random.choice(["check", "check", "check", "check", "check", "check", "check", "check", "raise5"])
+                action = random.choice(["check", "check", "check", "check", "check", "check", "check", "check", "check", "raise5"])
             elif call_amount <= 2:
                 action = "call"
             elif call_amount <= 10:
