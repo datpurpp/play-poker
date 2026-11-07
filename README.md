@@ -39,7 +39,7 @@ Depending on the underlying language of the application, make sure you have the 
 2. Receive your cards and manage your simulated chip balance.
 3. Test your skills against the built-in AI bots through standard check, bet, raise, and fold mechanics.
 
-BONUS (AQUIRE CHIPS): right click your poker_save file & click edit with notepad or notepad++ (really recommending notepad++ for your work), 
+BONUS (AQUIRE CHIPS): right click your poker_save JSON file & click edit with notepad or notepad++ (really recommending notepad++ for your work), 
 edit the numbers that come after "player_bank" & change it to whatever u want, that is how much chips your gonna have
 
 ## 🤝 Contributing
