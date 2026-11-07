@@ -137,6 +137,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
     action10 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold", "fold"])
     action11 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold", "fold", "fold"])
     action12 = random.choice(["call", "call", "fold", "fold", "fold", "fold", "fold"])
+    action13 = random.choice(["call", "call", "call", "call", "call", "call", "call", "fold"])
     
     if total_hand_investment >= 18:
         action3 = random.choice(["call"])
@@ -150,6 +151,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         action10 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold"])
         action11 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold", "fold"])
         action12 = random.choice(["call", "call", "fold", "fold", "fold", "fold"])
+        action13 = random.choice(["call", "call", "call", "call", "call", "call", "call", "call", "fold"])
         
         
     elif total_hand_investment >= 38:
@@ -164,6 +166,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         action10 = random.choice(["call", "fold", "fold", "fold", "fold", "fold"])
         action11 = random.choice(["call", "fold", "fold", "fold", "fold", "fold", "fold"])
         action12 = random.choice(["call", "call", "fold", "fold", "fold"])
+        action13 = random.choice(["call", "call", "call", "call", "call", "call", "call", "call", "call", "fold"])
     elif total_hand_investment >= 70:
         action3 = random.choice(["call"])
         action8 = random.choice(["call", "fold", "fold"])
@@ -176,6 +179,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         action10 = random.choice(["call", "fold", "fold", "fold", "fold"])
         action11 = random.choice(["call", "fold", "fold", "fold", "fold", "fold"])
         action12 = random.choice(["call", "fold"])
+        action13 = random.choice(["call", "call", "call", "call", "call", "call", "call", "call", "call", "call", "fold"])
     elif total_hand_investment >= 90:
         action3 = random.choice(["call"])
         action9 = random.choice(["call", "fold", "fold"])
@@ -188,6 +192,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         action10 = random.choice(["call", "fold", "fold", "fold"])
         action11 = random.choice(["call", "fold", "fold", "fold", "fold"])
         action12 = random.choice(["call", "call", "fold"])
+        action13 = random.choice(["call", "call", "call", "call", "call", "call", "call", "call", "call", "call", "call", "fold"])
         
     
         
@@ -206,7 +211,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         if call_amount == 0:
             action = random.choice(["raise2", "raise2", "check", "check", "check", "check"])
         elif call_amount <=10:
-            action = "call"
+            action = action13
         elif call_amount <= 15:
             action = action7
         elif call_amount <= 20:
@@ -223,7 +228,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         if call_amount == 0:
             action = random.choice(["raise", "raise", "check", "check", "check", "check", "check", "check"])
         elif call_amount <= 5:
-            action = "call"
+            action = action13
         elif call_amount <= 15:
             action = action7
         elif call_amount <= 30:
@@ -240,7 +245,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         if call_amount == 0:
             action = random.choice(["check", "check", "check", "check", "check", "check", "check", "check" "raise4"])
         elif call_amount <= 3:
-            action = "call"
+            action = action13
         elif call_amount <= 10:
             action = action7
         elif call_amount <= 20:
@@ -258,7 +263,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
             if call_amount == 0:
                 action = random.choice(["check", "check", "check", "check", "check", "check", "check", "check", "check", "check", "raise5"])
             elif call_amount <= 2:
-                action = "call"
+                action = action13
             elif call_amount <= 10:
                 action = action6  
             elif call_amount <= 20:
