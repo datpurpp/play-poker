@@ -135,13 +135,25 @@ def evaluate_wild_hand(hand):
     # Test all possible straight high-card endings from 5 (value 3) up to Ace (value 12)
     for high_val in range(3, 13):
         needed = set(range(high_val - 4, high_val + 1))
-        # Handle special Ace-low straight possibility (A, 2, 3, 4, 5) -> values (-1, 0, 1, 2, 3)
         if high_val == 3:
-            needed = {-1, 0, 1, 2} # Re-mapped values for low straight check
+            # Ace-low straight re-mapping (A, 2, 3, 4, 5) -> (-1, 0, 1, 2, 3)
+            # In Deuces Wild, a natural 2 counts as the 0 slot, or a wild card can fill it
+            needed = {-1, 0, 1, 2, 3}
             adjusted_nats = {-1 if v == 12 else v for v in unique_nats}
+            # Include natural 2s if they were kept, but since they are wild, they are counted in wild_count.
+            # However, to avoid double counting or skipping, we look at what natural cards are present:
             missing = needed - adjusted_nats
         else:
             missing = needed - set(unique_nats)
+            
+        # Treat any '0' (the value of rank '2') in 'missing' as covered if we have a deuce to spare.
+        # But wait: deuces are already counted in wild_count! Because 2s are completely wild,
+        # we don't need a natural 2 to make a straight; any wild 2 can fill the 0 slot or any other slot.
+        # The true problem is that high_val == 3 checked a 'needed' set of 4 elements instead of 5.
+        # Let's fix the missing calculation so it accounts for the 5-card requirement correctly.
+        if 0 in missing:
+            # A wild card will naturally be used to cover the '2' value slot since it's missing from unique_nats
+            pass
             
         if len(missing) <= wild_count:
             is_straight = True
@@ -170,9 +182,13 @@ def evaluate_wild_hand(hand):
 
     # 5. Flush
     if is_flush:
-        # Pad values up to 5 elements with Aces for dynamic wild-card fill tracking
-        fill_values = list(natural_values) + [12] * wild_count
-        return (5, sorted(fill_values, reverse=True)[:5], "Flush")
+        fill_values = list(natural_values)
+        next_fill = 12
+        while len(fill_values) < 5:
+            while next_fill in fill_values:
+                next_fill -= 1
+            fill_values.append(next_fill)
+        return (5, sorted(fill_values, reverse=True), "Flush")
 
     # 6. Straight
     if is_straight:
@@ -195,6 +211,7 @@ def evaluate_wild_hand(hand):
 
     # 8. Two Pair
     if len(mc) >= 2 and mc[0][1] == 2 and mc[1][1] == 2:
+        # FIX: Explicitly extract integer values [0][0] and [1][0] out of the tuples before comparing with 12
         kicker_val = mc[2][0] if len(mc) > 2 else (12 if mc[0][0] != 12 and mc[1][0] != 12 else 11)
         return (2, [mc[0][0], mc[1][0], kicker_val], "Two Pair")
 
@@ -254,7 +271,7 @@ def computer_discard_decision(hand, max_discards, is_deuces_wild=False):
 
 
 # --- AI BETTING LOGIC ---
-def computer_betting_decision(hand, current_bet, player_investment, max_chips, total_hand_investment):
+def computer_betting_decision(hand, current_bet, player_investment, max_chips, total_hand_investment, is_deuces_wild=False):
     """
     AI evaluates its hand and decides whether to fold, check, call, or raise.
     """
@@ -330,12 +347,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
     
         
     
-    if current_bet > 0 and '2' in [c.rank for c in hand] and total_hand_investment == 0:
-        # A quick check to see if we should treat it as wild during betting
-        score, _, _ = evaluate_wild_hand(hand)
-    else:
-        # Standard fallback if wild check isn't passed down, but let's make sure it checks both
-        score, _, _ = evaluate_wild_hand(hand) if any(c.rank == '2' for c in hand) else evaluate_hand(hand)
+    score, _, _ = evaluate_wild_hand(hand) if is_deuces_wild else evaluate_hand(hand)
         
     call_amount = current_bet - player_investment
     
@@ -382,7 +394,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
             action = "fold"
     elif score >= 1: # low hand (pair)
         if call_amount == 0:
-            action = random.choice(["check", "check", "check", "check", "check", "check", "check", "check" "raise4"])
+            action = random.choice(["check", "check", "check", "check", "check", "check", "check", "check", "raise4"])
         elif call_amount <= 3:
             action = action13
         elif call_amount <= 10:
@@ -459,7 +471,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
 
 
 # --- RUN BETTING ROUND ---
-def run_betting_round(hands, chips, active_players, label_names, master_investments):
+def run_betting_round(hands, chips, active_players, label_names, master_investments, is_deuces_wild=False):
     """
     Handles a structured round of betting where active players can check, call, raise, or fold.
     """
@@ -540,7 +552,7 @@ def run_betting_round(hands, chips, active_players, label_names, master_investme
                 current_total_investment = master_investments[i] + investments[i]
                 
                 # Pass the master investment into the decision
-                action, amount = computer_betting_decision(hands[i], current_bet, investments[i], chips[i], current_total_investment)
+                action, amount = computer_betting_decision(hands[i], current_bet, investments[i], chips[i], current_total_investment, is_deuces_wild)
                 
                 if action == "fold":
                     active_players.remove(i)
@@ -663,12 +675,11 @@ def play_game():
         if len(active_players) > 1:
             print("\n--- PHASE 1: FIRST CARDS DEAL ---")
             if 0 in active_players:
-                # Dynamically choose evaluator function based on game mode state
                 _, _, initial_hand_name = evaluate_wild_hand(hands[0]) if is_deuces_wild else evaluate_hand(hands[0])
                 print(f"Your starting hand: {hands[0]} ({initial_hand_name})")
                 
             print("\n--- PHASE 1 BETTING PHASE ---")
-            round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments)
+            round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments, is_deuces_wild)
             pot += round_pot
             print(f"Current total pot holds: {pot} chips.")
 
@@ -719,7 +730,7 @@ def play_game():
                     print(f"🤖 {label_names[i]} kept all cards.")
 
             print("\n--- PHASE 2 BETTING PHASE ---")
-            round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments)
+            round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments, is_deuces_wild)
             pot += round_pot
             print(f"Current total pot holds: {pot} chips.")
             
@@ -754,7 +765,7 @@ def play_game():
                     while len(hands[0]) < 5:
                         hands[0].append(deck.pop())
                     _, _, new_p3_name = evaluate_wild_hand(hands[0]) if is_deuces_wild else evaluate_hand(hands[0])
-                    print(f"Your final hand (Third Cards): {hands[0]} ({new_p3_name})")
+                    print(f"Your new hand (Third Cards): {hands[0]} ({new_p3_name})")
                 else:
                     print("You decided to keep all your cards.")
                     
@@ -771,7 +782,7 @@ def play_game():
                     print(f"🤖 {label_names[i]} kept all cards.")
 
             print("\n--- PHASE 3 BETTING PHASE ---")
-            round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments)
+            round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments, is_deuces_wild)
             pot += round_pot
             print(f"Current total pot holds: {pot} chips.")
 
@@ -822,7 +833,7 @@ def play_game():
                     print(f"🤖 {label_names[i]} kept all cards.")
 
             print("\n--- PHASE 4 FINAL BETTING PHASE ---")
-            round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments)
+            round_pot = run_betting_round(hands, chips, active_players, label_names, master_investments, is_deuces_wild)
             pot += round_pot
             print(f"Current total pot holds: {pot} chips.")
             
