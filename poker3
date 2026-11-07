@@ -233,7 +233,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
             action = "fold"
     elif score >= 1: # low hand (pair)
         if call_amount == 0:
-            action = random.choice(["check", "check", "check", "check", "check", "check", "raise4"])
+            action = random.choice(["check", "check", "check", "check", "check", "check", "check", "raise4"])
         elif call_amount <= 3:
             action = "call"
         elif call_amount <= 10:
@@ -251,7 +251,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
     else: 
         if score >= 0: # weak hand (high card)
             if call_amount == 0:
-                action = "check"
+                action = random.choice(["check", "check", "check", "check", "check", "check", "check", "check", "raise5"])
             elif call_amount <= 2:
                 action = "call"
             elif call_amount <= 10:
@@ -293,6 +293,11 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
         return "raise", call_amount + raise_val
     elif action == "raise4":
         raise_val = min(max_chips - call_amount, random.choice([2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 4, 4, 4, 4, 8, 8, 15]))
+        if raise_val <= 0:
+            return "call", call_amount
+        return "raise", call_amount + raise_val
+    elif action == "raise5":
+        raise_val = min(max_chips - call_amount, random.choice([1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 3, 3, 3, 3, 6, 6, 12]))
         if raise_val <= 0:
             return "call", call_amount
         return "raise", call_amount + raise_val
