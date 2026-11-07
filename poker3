@@ -215,7 +215,7 @@ def computer_betting_decision(hand, current_bet, player_investment, max_chips, t
             action = "fold"
     elif score >= 1: # low hand (pair)
         if call_amount == 0:
-            action = random.choice(["check", "check", "check", "check", "check", "raise4"])
+            action = random.choice(["check", "check", "check", "check", "check", "check", "raise4"])
         elif call_amount <= 3:
             action = "call"
         elif call_amount <= 10:
