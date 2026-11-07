@@ -32,15 +32,19 @@ def evaluate_hand(hand):
     
     is_flush = len(set(suits)) == 1
     
+    # --- FIXED STRAIGHT CHECKING BLOCK ---
     is_straight = False
     unique_vals = sorted(list(set(values)))
-    if len(unique_vals) == 5 and (unique_vals[-1] - unique_vals[0] == 4):
-        is_straight = True
     
-    # Special case Ace low straight (A, 2, 3, 4, 5) -> values (12, 3, 2, 1, 0)
-    if set(values) == {12, 3, 2, 1, 0}:
-        is_straight = True
-        values = [3, 2, 1, 0, -1] # Re-rank for tie-breaking
+    # Only evaluate as a straight if the hand contains exactly 5 unique card ranks
+    if len(unique_vals) == 5:
+        # Check standard sequential straight
+        if unique_vals[-1] - unique_vals[0] == 4:
+            is_straight = True
+        # Special case: Verify Ace-low straight (A, 2, 3, 4, 5) possesses exactly those values
+        elif set(values) == {12, 3, 2, 1, 0}:
+            is_straight = True
+            values = [3, 2, 1, 0, -1] # Re-rank accurately for tie-breaking matchups
         
     counts = Counter(values)
     mc = counts.most_common()
@@ -197,32 +201,43 @@ def evaluate_wild_hand(hand):
 
 
 # --- AI DISCARD LOGIC ---
-def computer_discard_decision(hand, max_discards):
+# --- AI DISCARD LOGIC ---
+def computer_discard_decision(hand, max_discards, is_deuces_wild=False):
     """
     Simple AI: Holds onto pairs or better. If it has nothing,
     it keeps its highest cards and discards the lowest up to the limit.
+    In Deuces Wild mode, it NEVER discards a wild 2.
     """
-    score, values, hand_name = evaluate_hand(hand)
+    # Use the appropriate evaluator based on the active game mode
+    score, values, hand_name = evaluate_wild_hand(hand) if is_deuces_wild else evaluate_hand(hand)
     counts = Counter([card.value for card in hand])
     
-    # If AI has a straight, flush, full house, etc., don't discard anything!
+    # If AI has a straight, flush, full house, or better, don't change anything!
     if score >= 4:
         return []
         
     discard_indices = []
     
-    # If AI has Three of a Kind, Two Pair, or One Pair, keep the matching cards, discard kickers
+    # If AI has Three of a Kind, Two Pair, or One Pair, keep matching cards, discard kickers
     if score in [1, 2, 3]:
         for i, card in enumerate(hand):
-            if counts[card.value] == 1: # It's a kicker
+            # In wild mode, protect any '2' from being discarded as a kicker
+            if is_deuces_wild and card.rank == '2':
+                continue
+            if counts[card.value] == 1: # It's a single kicker card
                 discard_indices.append(i)
     else:
-        # High card setup: Discard the lowest cards up to the limit
+        # High card setup: Discard the lowest cards up to the limit, protecting 2s
+        # Sort cards by value lowest to highest
         sorted_indices = sorted(range(len(hand)), key=lambda k: hand[k].value)
-        discard_indices = sorted_indices[:max_discards]
+        for idx in sorted_indices:
+            if is_deuces_wild and hand[idx].rank == '2':
+                continue # Skip discarding if it's a wild card
+            discard_indices.append(idx)
         
     # Strictly respect the round constraint limit
     return discard_indices[:max_discards]
+
 
 # --- AI BETTING LOGIC ---
 def computer_betting_decision(hand, current_bet, player_investment, max_chips, total_hand_investment):
@@ -673,7 +688,7 @@ def play_game():
                     
             for i in list(active_players):
                 if i == 0: continue
-                comp_discard_indices = computer_discard_decision(hands[i], max_discards)
+                comp_discard_indices = computer_discard_decision(hands[i], max_discards, is_deuces_wild)
                 if comp_discard_indices:
                     for pos in sorted(comp_discard_indices, reverse=True):
                         hands[i].pop(pos)
@@ -725,7 +740,7 @@ def play_game():
                     
             for i in list(active_players):
                 if i == 0: continue
-                comp_discard_indices = computer_discard_decision(hands[i], max_discards)
+                comp_discard_indices = computer_discard_decision(hands[i], max_discards, is_deuces_wild)
                 if comp_discard_indices:
                     for pos in sorted(comp_discard_indices, reverse=True):
                         hands[i].pop(pos)
@@ -776,7 +791,7 @@ def play_game():
                     
             for i in list(active_players):
                 if i == 0: continue
-                comp_discard_indices = computer_discard_decision(hands[i], max_discards)
+                comp_discard_indices = computer_discard_decision(hands[i], max_discards, is_deuces_wild)
                 if comp_discard_indices:
                     for pos in sorted(comp_discard_indices, reverse=True):
                         hands[i].pop(pos)
